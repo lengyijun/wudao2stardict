@@ -1,4 +1,10 @@
-use std::{collections::BTreeMap, fmt::Display, fs, io::Read, iter::once};
+use std::{
+    collections::BTreeMap,
+    fmt::Display,
+    fs::{self, File},
+    io::{Read, Write},
+    iter::once,
+};
 
 static EN_IND: &str = "/home/lyj/.cache/github/wudao-dict/wudao-dict/dict/en.ind";
 
@@ -16,19 +22,23 @@ struct S {
 
 impl Display for S {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}", &self.word)?;
+        write!(f, "{}", &self.word)?;
         if self.pronunciation_am.is_empty() && self.pronunciation_en.is_empty() {
         } else {
-            writeln!(f, "{} {}", &self.pronunciation_am, &self.pronunciation_en)?;
+            write!(
+                f,
+                "\\n{} {}",
+                &self.pronunciation_am, &self.pronunciation_en
+            )?;
         }
         if !self.paraphrase.is_empty() {
-            writeln!(f, "{}", &self.paraphrase)?;
+            write!(f, "\\n{}", &self.paraphrase)?;
         }
         if !self.pattern.is_empty() {
-            writeln!(f, "{}", &self.pattern)?;
+            write!(f, "\\n{}", &self.pattern)?;
         }
         if !self.sentence.is_empty() {
-            writeln!(f, "{}", &self.sentence)?;
+            write!(f, "\\n{}", &self.sentence)?;
         }
         Ok(())
     }
@@ -42,7 +52,7 @@ fn main() {
     let v1 = ind_data.lines();
     let v2 = v1.clone().skip(1).chain(once(&x as &str));
 
-    let mut btree_mp: BTreeMap<String, (String, S)> = BTreeMap::new();
+    let mut btree_mp: BTreeMap<(String, String), S> = BTreeMap::new();
 
     for (a, b) in v1.zip(v2) {
         let (word, start) = extract_word(a);
@@ -50,9 +60,14 @@ fn main() {
 
         let decompressed_data = decode(&zdata[start..end]);
         let s = reorganize(&decompressed_data);
-        dbg!(&s);
 
-        btree_mp.insert(word.to_lowercase(), (word.to_owned(), s));
+        btree_mp.insert((word.to_lowercase(), word.to_owned()), s);
+    }
+
+    let mut file = File::create("wudao.tab").unwrap();
+
+    for ((_, k), v) in btree_mp {
+        file.write(format!("{k}\u{0009}{}\n", v.to_string()).as_bytes()).unwrap();
     }
 }
 
