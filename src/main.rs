@@ -47,39 +47,31 @@ impl Display for S {
 
         write!(f, "\\n",)?;
         match &self.sentence {
-            D::L(value) => {
-                if let Value::Array(xs) = value {
-                    for x in xs {
-                        match x {
-                            Value::Array(ys) => {
-                                for y in ys {
-                                    match y {
-                                        Value::Null
-                                        | Value::Bool(_)
-                                        | Value::Number(_)
-                                        | Value::Object(_) => {}
-                                        Value::String(s) => {
-                                            write!(f, "{s}\t")?;
-                                        }
-                                        Value::Array(zs) => {
-                                            for z in zs {
-                                                if let Value::String(z) = z {
-                                                    write!(f, "{z}")?;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                write!(f, "\\n")?;
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-            }
             D::Raw(s) => {
                 write!(f, "{s}",)?;
             }
+            D::L(Value::Array(xs)) => {
+                for x in xs {
+                    let Value::Array(ys) = x else { continue };
+                    for y in ys {
+                        match y {
+                            Value::Null | Value::Bool(_) | Value::Number(_) | Value::Object(_) => {}
+                            Value::String(s) => {
+                                write!(f, "{s}\t")?;
+                            }
+                            Value::Array(zs) => {
+                                for z in zs {
+                                    if let Value::String(z) = z {
+                                        write!(f, "{z}")?;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    write!(f, "\\n")?;
+                }
+            }
+            _ => {}
         }
         Ok(())
     }
