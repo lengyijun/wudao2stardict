@@ -1,3 +1,4 @@
+use serde_json::Value;
 use std::{
     collections::BTreeMap,
     fmt::Display,
@@ -11,13 +12,19 @@ static EN_IND: &str = "/home/lyj/.cache/github/wudao-dict/wudao-dict/dict/en.ind
 static EN_Z: &str = "/home/lyj/.cache/github/wudao-dict/wudao-dict/dict/en.z";
 
 #[derive(Debug)]
+enum D {
+    L(Value),
+    Raw(String),
+}
+
+#[derive(Debug)]
 struct S {
     word: String,
     pronunciation_am: String,
     pronunciation_en: String,
     paraphrase: String,
     pattern: String,
-    sentence: String,
+    sentence: D,
 }
 
 impl Display for S {
@@ -37,8 +44,42 @@ impl Display for S {
         if !self.pattern.is_empty() {
             write!(f, "\\n{}", &self.pattern)?;
         }
-        if !self.sentence.is_empty() {
-            write!(f, "\\n{}", &self.sentence)?;
+
+        write!(f, "\\n",)?;
+        match &self.sentence {
+            D::L(value) => {
+                if let Value::Array(xs) = value {
+                    for x in xs {
+                        match x {
+                            Value::Array(ys) => {
+                                for y in ys {
+                                    match y {
+                                        Value::Null
+                                        | Value::Bool(_)
+                                        | Value::Number(_)
+                                        | Value::Object(_) => {}
+                                        Value::String(s) => {
+                                            write!(f, "{s}\t")?;
+                                        }
+                                        Value::Array(zs) => {
+                                            for z in zs {
+                                                if let Value::String(z) = z {
+                                                    write!(f, "{z}")?;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                write!(f, "\\n")?;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            D::Raw(s) => {
+                write!(f, "{s}",)?;
+            }
         }
         Ok(())
     }
@@ -67,7 +108,8 @@ fn main() {
     let mut file = File::create("wudao.tab").unwrap();
 
     for ((_, k), v) in btree_mp {
-        file.write(format!("{k}\u{0009}{}\n", v.to_string()).as_bytes()).unwrap();
+        file.write(format!("{k}\u{0009}{}\n", v.to_string()).as_bytes())
+            .unwrap();
     }
 }
 
@@ -85,12 +127,16 @@ fn decode(x: &[u8]) -> String {
 
 fn reorganize(x: &str) -> S {
     let v: Vec<_> = x.split('|').collect();
+    let sentence = match serde_json::from_str(v[8]) {
+        Ok(s) => D::L(s),
+        Err(_) => D::Raw(v[8].to_owned()),
+    };
     S {
         word: v[0].to_owned(),
         pronunciation_am: v[2].to_owned(),
         pronunciation_en: v[3].to_owned(),
         paraphrase: v[5].to_owned(),
         pattern: v[7].to_owned(),
-        sentence: v[8].to_owned(),
+        sentence,
     }
 }
