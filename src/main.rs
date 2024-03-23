@@ -96,6 +96,8 @@ fn main() {
 
         btree_mp.insert((word.to_lowercase(), word.to_owned()), s);
     }
+    btree_mp.remove(&("ecstasy".to_owned(), "ecstasy".to_owned()));
+    btree_mp.remove(&("takeaway".to_owned(), "takeaway".to_owned()));
 
     let mut file = File::create("wudao.tab").unwrap();
 
