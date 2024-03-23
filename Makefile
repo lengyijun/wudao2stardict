@@ -1,8 +1,10 @@
 SHELL:=/bin/bash
 
+DEST = ~/.config/dioxionary/wudao-dict/
+
 all:
 	cargo run
 	mytabfile wudao.tab
-	sudo mkdir -p /usr/share/stardict/dic/wudao-dict/
-	sudo rm -rf /usr/share/stardict/dic/wudao-dict/*
-	sudo cp wudao* /usr/share/stardict/dic/wudao-dict/
+	mkdir -p $(DEST)
+	rm -rf $(DEST)/*
+	cp wudao* $(DEST)
